@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الماسح الذكي - Liquid Glass QR & Barcode Scanner</title>
+
+    <!-- html5-qrcode Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+        :root {
+            /* Theme Variables - Dark Mode Default */
+            --bg-color: #0b0f19;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 60%, #090d16 100%);
+            
+            --glass-bg: rgba(30, 41, 59, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shadow: rgba(0, 0, 0, 0.6);
+            --glass-highlight: rgba(255, 255, 255, 0.2);
+            --glass-caustic: rgba(255, 255, 255, 0.04);
+
+            --pill-bg: rgba(255, 255, 255, 0.15);
+            --pill-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-gradient: linear-gradient(135deg, #38bdf8, #818cf8);
+            
+            --card-inner-bg: rgba(15, 23, 42, 0.6);
+            --icon-color: rgba(255, 255, 255, 0.7);
+            --icon-active: #ffffff;
+        }
+
+        [data-theme="light"] {
+            /* Theme Variables - Light Mode */
+            --bg-color: #e2e8f0;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #ffffff 0%, #e2e8f0 70%, #cbd5e1 100%);
+            
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: rgba(0, 0, 0, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.9);
+            --glass-caustic: rgba(255, 255, 255, 0.5);
+
+            --pill-bg: rgba(255, 255, 255, 0.85);
+            --pill-shadow: 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.9);
+            
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-color: #0284c7;
+            --accent-gradient: linear-gradient(135deg, #0284c7, #4f46e5);
+            
+            --card-inner-bg: rgba(255, 255, 255, 0.5);
+            --icon-color: rgba(15, 23, 42, 0.6);
+            --icon-active: #0f172a;
+        }
+
+        /* RESET & BASE STYLES */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Tajawal", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px 15px;
+            transition: background 0.5s ease, color 0.5s ease;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* HEADER AREA & TOP LEFT THEME SWITCHER */
+        header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 5px;
+            position: relative;
+        }
+
+        .header-title-box {
+            text-align: right;
+        }
+
+        .header-title-box h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-title-box p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* CIRCULAR GLASS THEME BUTTON (TOP-LEFT) */
+        .theme-toggle-btn {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 25px var(--glass-shadow), inset 0 1px 2px var(--glass-highlight);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--icon-active);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+            outline: none;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle-btn:active {
+            transform: scale(0.9);
+        }
+
+        .theme-icon-sun, .theme-icon-moon {
+            position: absolute;
+            transition: transform 0.5s cubic-bezier(0.34, 1.26, 0.64, 1), opacity 0.4s ease;
+            width: 22px;
+            height: 22px;
+        }
+
+        [data-theme="dark"] .theme-icon-sun { opacity: 1; transform: rotate(0deg) scale(1); }
+        [data-theme="dark"] .theme-icon-moon { opacity: 0; transform: rotate(-90deg) scale(0); }
+
+        [data-theme="light"] .theme-icon-sun { opacity: 0; transform: rotate(90deg) scale(0); }
+        [data-theme="light"] .theme-icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+        /* LIQUID GLASS CONTAINER */
+        .liquid-card {
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px) saturate(190%);
+            -webkit-backdrop-filter: blur(40px) saturate(190%);
+            border-radius: 28px;
+            padding: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 
+                0 30px 60px -15px var(--glass-shadow),
+                inset 0 2px 2px -1px var(--glass-highlight),
+                inset 0 -2px 4px -1px var(--glass-caustic);
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+
+        /* LIQUID NAV TABS */
+        .liquid-nav {
+            position: relative;
+            display: flex;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 99px;
+            padding: 5px;
+            border: 1px solid var(--glass-border);
+            gap: 4px;
+        }
+
+        .active-pill {
+            position: absolute;
+            top: 5px;
+            bottom: 5px;
+            right: 5px;
+            width: calc(50% - 7px);
+            background: var(--pill-bg);
+            border-radius: 99px;
+            box-shadow: var(--pill-shadow);
+            transition: transform 0.4s cubic-bezier(0.34, 1.2, 0.64, 1), width 0.4s ease;
+            z-index: 1;
+        }
+
+        [dir="rtl"] .tab-btn:nth-child(2).active ~ .active-pill {
+            transform: translateX(0);
+        }
+
+        [dir="rtl"] .tab-btn:nth-child(3).active ~ .active-pill {
+            transform: translateX(-100%);
+        }
+
+        .tab-btn {
+            position: relative;
+            flex: 1;
+            height: 44px;
+            border: none;
+            background: transparent;
+            color: var(--icon-color);
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            z-index: 2;
+            transition: color 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: var(--icon-active);
+        }
+
+        .tab-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* CAMERA SCANNER AREA */
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            min-height: 300px;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--glass-border);
+            margin-top: 15px;
+        }
+
+        #reader {
+            width: 100% !important;
+            border: none !important;
+        }
+
+        #reader video {
+            object-fit: cover !important;
+            border-radius: 20px;
+        }
+
+        /* Custom Laser Scan Line */
+        .laser-line {
+            position: absolute;
+            top: 10%;
+            left: 5%;
+            right: 5%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            box-shadow: 0 0 15px var(--accent-color);
+            animation: scanAnimation 2.2s infinite ease-in-out;
+            z-index: 10;
+            pointer-events: none;
+            display: none;
+        }
+
+        @keyframes scanAnimation {
+            0% { top: 10%; opacity: 0.3; }
+            50% { top: 85%; opacity: 1; }
+            100% { top: 10%; opacity: 0.3; }
+        }
+
+        /* FILE UPLOAD DROP ZONE */
+        .upload-zone {
+            border: 2px dashed var(--glass-border);
+            border-radius: 20px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--card-inner-bg);
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon-box {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background: var(--pill-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            box-shadow: var(--pill-shadow);
+        }
+
+        .upload-icon-box svg {
+            width: 30px;
+            height: 30px;
+            stroke-width: 2;
+        }
+
+        /* RESULT DISPLAY CARD */
+        .result-card {
+            display: none;
+            margin-top: 10px;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .badge {
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-info { background: rgba(56, 189, 248, 0.15); color: var(--accent-color); border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-wifi { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
+
+        .result-content-box {
+            background: var(--card-inner-bg);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--glass-border);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            word-break: break-all;
+            margin-bottom: 16px;
+            max-height: 160px;
+            overflow-y: auto;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .action-btns-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.25);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--pill-bg);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* GLASS PERMISSION MODAL */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 28px 22px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            transform: scale(0.85);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 22px;
+        }
+
+        /* AUTO-REDIRECT OVERLAY NOTIFICATION */
+        .redirect-overlay {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            padding: 14px 24px;
+            border-radius: 99px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+
+        .redirect-overlay.active {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* TOAST NOTIFICATION */
+        .toast {
+            position: fixed;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-80px);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 12px 20px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1001;
+            transition: transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        .toast.active {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- HEADER WITH TOP-LEFT THEME BUTTON -->
+        <header>
+            <div class="header-title-box">
+                <h1>
+                    <!-- Inline SVG QR Icon -->
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color);">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                    </svg>
+                    الماسح الذكي
+                </h1>
+                <p>قراءة الـ QR والباركود مباشرة بالتصميم الزجاجي</p>
+            </div>
+
+            <!-- TOP-LEFT CIRCULAR THEME BUTTON -->
+            <button class="theme-toggle-btn" id="theme-btn" aria-label="تغيير المظهر">
+                <!-- Sun Icon -->
+                <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <!-- Moon Icon -->
+                <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+        </header>
+
+        <!-- MAIN LIQUID GLASS CARD -->
+        <main class="liquid-card">
+            
+            <!-- LIQUID TABS NAVIGATION -->
+            <div class="liquid-nav">
+                <div class="active-pill" id="active-pill"></div>
+                
+                <button class="tab-btn active" id="btn-tab-cam" onclick="switchTab('camera')">
+                    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    مسح الكاميرا
+                </button>
+                
+                <button class="tab-btn" id="btn-tab-file" onclick="switchTab('file')">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    رفع صورة
+                </button>
+            </div>
+
+            <!-- TAB 1: CAMERA SCANNER SECTION -->
+            <div id="section-camera">
+                <div class="scanner-container">
+                    <div id="reader"></div>
+                    <div class="laser-line" id="laser-line"></div>
+                </div>
+            </div>
+
+            <!-- TAB 2: FILE UPLOAD SECTION -->
+            <div id="section-file" class="hidden">
+                <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+                    <div class="upload-icon-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1rem; font-weight: 700;">اضغط هنا لاختيار صورة</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">فحص تلقائي فوري لصور QR والباركود</p>
+                    </div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+            </div>
+
+        </main>
+
+        <!-- RESULT CARD (FOR TEXT / WI-FI / NON-URL CONTENT) -->
+        <div class="liquid-card result-card" id="result-card">
+            <div class="result-header">
+                <span class="badge badge-info" id="result-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    <span id="result-badge-text">محتوى رمزي</span>
+                </span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);" id="result-format">QR_CODE</span>
+            </div>
+
+            <div class="result-content-box" id="result-content">
+                <!-- Text / WiFi details injected here -->
+            </div>
+
+            <div class="action-btns-row" id="action-btns-container">
+                <!-- Action buttons injected dynamically -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- GLASS PERMISSION MODAL -->
+    <div class="modal-overlay" id="permission-modal">
+        <div class="modal-card">
+            <div class="modal-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </div>
+            <h2 class="modal-title">السماح بتشغيل الكاميرا</h2>
+            <p class="modal-desc">يحتاج التطبيق لإذن استخدام الكاميرا لقراءة أسطح الـ QR Code والباركود مباشرة بشكل سريع وآمن.</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="action-btn btn-primary" onclick="grantPermission()">
+                    سماح وتشغيل
+                </button>
+                <button class="action-btn btn-secondary" onclick="denyPermission()">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTO-REDIRECT OVERLAY NOTIFICATION -->
+    <div class="redirect-overlay" id="redirect-overlay">
+        <div class="spinner"></div>
+        <span style="font-size: 0.9rem; font-weight: 700;" id="redirect-text">جاري التوجيه التلقائي للموقع...</span>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="toast" id="toast-msg">تم النسخ بنجاح</div>
+
+    <script>
+        // GLOBAL STATE
+        let html5QrCode = null;
+        let isScannerRunning = false;
+        let activeTab = 'camera';
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', () => {
+            initThemeToggle();
+            html5QrCode = new Html5Qrcode("reader");
+            
+            // Check Camera Permission Status
+            checkCameraPermissionAndStart();
+        });
+
+        // THEME TOGGLE LOGIC
+        function initThemeToggle() {
+            const themeBtn = document.getElementById('theme-btn');
+            const root = document.documentElement;
+
+            themeBtn.addEventListener('click', () => {
+                const currentTheme = root.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                root.setAttribute('data-theme', newTheme);
+            });
+        }
+
+        // TAB SWITCHING
+        function switchTab(tab) {
+            if (activeTab === tab) return;
+            activeTab = tab;
+
+            const btnCam = document.getElementById('btn-tab-cam');
+            const btnFile = document.getElementById('btn-tab-file');
+            const secCam = document.getElementById('section-camera');
+            const secFile = document.getElementById('section-file');
+
+            if (tab === 'camera') {
+                btnCam.classList.add('active');
+                btnFile.classList.remove('active');
+                secCam.classList.remove('hidden');
+                secFile.classList.add('hidden');
+                checkCameraPermissionAndStart();
+            } else {
+                btnFile.classList.add('active');
+                btnCam.classList.remove('active');
+                secFile.classList.remove('hidden');
+                secCam.classList.add('hidden');
+                stopCamera();
+            }
+        }
+
+        // CAMERA PERMISSION & START LOGIC
+        function checkCameraPermissionAndStart() {
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'camera' })
+                    .then(permissionStatus => {
+                        if (permissionStatus.state === 'granted') {
+                            startCamera();
+                        } else if (permissionStatus.state === 'prompt') {
+                            showModal();
+                        } else {
+                            showModal();
+                        }
+                    })
+                    .catch(() => showModal());
+            } else {
+                showModal();
+            }
+        }
+
+        function showModal() {
+            document.getElementById('permission-modal').classList.add('active');
+        }
+
+        function hideModal() {
+            document.getElementById('permission-modal').classList.remove('active');
+        }
+
+        function grantPermission() {
+            hideModal();
+            startCamera();
+        }
+
+        function denyPermission() {
+            hideModal();
+            showToast('تم إلغاء الكاميرا، يمكنك استخدام رفع الصور');
+        }
+
+        async function startCamera() {
+            if (isScannerRunning) return;
+
+            const config = { 
+                fps: 15, 
+                qrbox: { width: 230, height: 230 },
+                aspectRatio: 1.0 
+            };
+
+            try {
+                document.getElementById('laser-line').style.display = 'block';
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanFailure
+                );
+                isScannerRunning = true;
+            } catch (err) {
+                console.error("Camera Start Error:", err);
+                document.getElementById('laser-line').style.display = 'none';
+                showToast("تعذر الوصول للكاميرا");
+            }
+        }
+
+        async function stopCamera() {
+            if (html5QrCode && isScannerRunning) {
+                try {
+                    await html5QrCode.stop();
+                    isScannerRunning = false;
+                } catch (err) {
+                    console.log("Camera Stop Error:", err);
+                }
+            }
+            document.getElementById('laser-line').style.display = 'none';
+        }
+
+        // FILE UPLOAD PROCESSING
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            stopCamera();
+
+            try {
+                showToast("جاري معالجة الصورة...");
+                const decodedText = await html5QrCode.scanFile(file, true);
+                onScanSuccess(decodedText, { result: { format: { formatName: "IMAGE_FILE" } } });
+            } catch (err) {
+                console.error("File Scan Error:", err);
+                showToast("لم يتم العثور على رمز QR أو باركود واضح في هذه الصورة");
+            }
+        }
+
+        // SCAN SUCCESS HANDLER WITH AUTO-REDIRECT LOGIC
+        function onScanSuccess(decodedText, decodedResult) {
+            playBeep();
+            const text = decodedText.trim();
+
+            // 1. Check if Content is a URL or App Store Link -> AUTO REDIRECT IMMEDIATELY!
+            if (isURL(text)) {
+                triggerAutoRedirect(text);
+                return;
+            }
+
+            // 2. Check if Content is Wi-Fi Configuration
+            if (text.startsWith("WIFI:")) {
+                renderWiFiResult(text);
+                return;
+            }
+
+            // 3. Plain Text / Product Barcode Data
+            renderTextResult(text, decodedResult?.result?.format?.formatName || "QR_CODE");
+        }
+
+        function onScanFailure(error) {
+            // Ignore frame scan failures during continuous streaming
+        }
+
+        // URL DETECTOR
+        function isURL(str) {
+            const pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+                '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+                '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+                '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+                '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+                '(\\#[-a-z\\d_]*)?$','i');
+            
+            return !!pattern.test(str) || str.startsWith('market://') || str.includes('play.google.com') || str.includes('apps.apple.com');
+        }
+
+        // TRIGGER AUTO REDIRECT FOR WEBSITES AND APP STORES
+        function triggerAutoRedirect(url) {
+            let targetUrl = url;
+            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://') && !targetUrl.startsWith('market://')) {
+                targetUrl = 'https://' + targetUrl;
+            }
+
+            let msg = "جاري التوجيه التلقائي للموقع...";
+            if (url.includes('play.google.com') || url.includes('apps.apple.com') || url.includes('market://')) {
+                msg = "جاري فتح متجر التطبيقات...";
+            }
+
+            const redirectOverlay = document.getElementById('redirect-overlay');
+            document.getElementById('redirect-text').innerText = msg;
+            redirectOverlay.classList.add('active');
+
+            // Pause Camera while redirecting
+            stopCamera();
+
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 1200);
+        }
+
+        // RENDER WI-FI CREDENTIALS INSIDE APP
+        function renderWiFiResult(wifiStr) {
+            const card = document.getElementById('result-card');
+            const badge = document.getElementById('result-badge');
+            const badgeText = document.getElementById('result-badge-text');
+            const format = document.getElementById('result-format');
+            const content = document.getElementById('result-content');
+            const btns = document.getElementById('action-btns-container');
+
+            badge.className = "badge badge-wifi";
+            badgeText.innerText = "شبكة Wi-Fi";
+            format.innerText = "WIFI_CONFIG";
+
+            // Extract SSID and Password
+            const ssidMatch = wifiStr.match(/S:([^;]+);/);
+            const passMatch = wifiStr.match(/P:([^;]+);/);
+
+            const ssid = ssidMatch ? ssidMatch[1] : "غير محدد";
+            const pass = passMatch ? passMatch[1] : "بدون كلمة سر";
+
+            content.innerHTML = `
+                <div style="direction: rtl; text-align: right;">
+                    <p style="margin-bottom: 6px;"><strong>اسم الشبكة (SSID):</strong> <span style="color: var(--accent-color); font-family: monospace;">${escapeHtml(ssid)}</span></p>
+                    <p><strong>كلمة السر:</strong> <span style="color: var(--accent-color); font-family: monospace;">${escapeHtml(pass)}</span></p>
+                </div>
+            `;
+
+            btns.innerHTML = `
+                <button class="action-btn btn-primary" onclick="copyToClipboard('${escapeJs(pass)}')">
+                    نسخ كلمة السر
+                </button>
+            `;
+
+            card.style.display = 'block';
+            card.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // RENDER PLAIN TEXT / PRODUCT BARCODE RESULT
+        function renderTextResult(text, formatName) {
+            const card = document.getElementById('result-card');
+            const badge = document.getElementById('result-badge');
+            const badgeText = document.getElementById('result-badge-text');
+            const format = document.getElementById('result-format');
+            const content = document.getElementById('result-content');
+            const btns = document.getElementById('action-btns-container');
+
+            badge.className = "badge badge-info";
+            badgeText.innerText = "معلومات نصية";
+            format.innerText = formatName;
+
+            content.innerText = text;
+
+            btns.innerHTML = `
+                <button class="action-btn btn-primary" onclick="copyToClipboard('${escapeJs(text)}')">
+                    نسخ النص
+                </button>
+                <a href="https://www.google.com/search?q=${encodeURIComponent(text)}" target="_blank" class="action-btn btn-secondary">
+                    بحث Google
+                </a>
+            `;
+
+            card.style.display = 'block';
+            card.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // HELPER FUNCTIONS
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => showToast("تم النسخ للحافظة"));
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast("تم النسخ للحافظة");
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-msg');
+            toast.innerText = msg;
+            toast.classList.add('active');
+            setTimeout(() => toast.classList.remove('active'), 2800);
+        }
+
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = "sine";
+                osc.frequency.value = 850;
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.12);
+            } catch (e) {}
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function escapeJs(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+    </script>
+</body>
+</html>
